@@ -1,0 +1,246 @@
+import Room from './components/Room'
+import { useEffect } from 'react'
+import { usePlayerStore } from './logic/usePlayerStore'
+import { useProjectileStore } from './logic/useProjectileStore'
+import { useGameLoop } from './logic/useGameLoop'
+import { useRoomStore } from './logic/useRoomStore'
+
+
+const keys = {}
+
+
+function App() {
+  const hp = usePlayerStore((state) => state.hp)
+  const x = usePlayerStore((state) => state.x)
+  const y = usePlayerStore((state) => state.y)
+  const maxHp = usePlayerStore((state) => state.maxHp)
+  const powerUps = useRoomStore((state) => state.powerUps)
+  const currentRoom = useRoomStore((state) => state.currentRoom)
+  const enemies = useRoomStore((state) => state.enemies) || new Map()
+  const roomEnemies = enemies instanceof Map ? enemies.get(currentRoom) || [] : []
+
+
+  
+  useEffect(() => {
+  const down = (e) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+      e.preventDefault()
+    }
+    keys[e.key.toLowerCase()] = true
+  }
+  const up = (e) => {
+    keys[e.key.toLowerCase()] = false
+  }
+
+    window.addEventListener('keydown', down, { passive: false })
+    window.addEventListener('keyup', up)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+    }
+  }, [])
+
+  useGameLoop(() => {
+    // Movimiento del jugador
+    const dx = (keys['a'] ? -1 : 0) + (keys['d'] ? 1 : 0)
+    const dy = (keys['w'] ? -1 : 0) + (keys['s'] ? 1 : 0)
+    const magnitude = Math.sqrt(dx * dx + dy * dy) || 1
+    usePlayerStore.getState().setMoveDir({ x: dx / magnitude, y: dy / magnitude })
+    usePlayerStore.getState().updatePosition()
+    
+
+    // Disparos con flechas
+    const { x, y } = usePlayerStore.getState()
+    if (keys['arrowup']) {
+      useProjectileStore.getState().shoot(x + 12, y, 0, -1, 'up')
+    } else if (keys['arrowdown']) {
+      useProjectileStore.getState().shoot(x + 12, y + 32, 0, 1, 'down')
+    } else if (keys['arrowleft']) {
+      useProjectileStore.getState().shoot(x, y + 12, -1, 0, 'left')
+    } else if (keys['arrowright']) {
+      useProjectileStore.getState().shoot(x + 32, y + 12, 1, 0, 'right')
+    }
+
+    // Actualizar balas
+    useProjectileStore.getState().updateProjectiles()
+
+    // Colisión balas-enemigos
+    const { projectiles } = useProjectileStore.getState()
+    const { enemies, currentRoom } = useRoomStore.getState()
+    const roomEnemies = enemies.get(currentRoom) || []
+
+    const projectilesToRemove = new Set()
+    const enemiesToRemove = new Set()
+
+    projectiles.forEach((proj) => {
+      roomEnemies.forEach((enemy) => {
+        const dx = proj.x - enemy.x
+        const dy = proj.y - enemy.y
+        const distance = Math.sqrt(dx * dx + dy * dy)
+        if (distance < 16) {
+          projectilesToRemove.add(proj.id)
+          enemiesToRemove.add(enemy.id)
+        }
+      })
+    })
+
+    // Elimina proyectiles golpeados
+    if (projectilesToRemove.size > 0) {
+      useProjectileStore.setState((state) => ({
+        projectiles: state.projectiles.filter((p) => !projectilesToRemove.has(p.id))
+      }))
+    }
+
+    // Elimina enemigos golpeados
+    if (enemiesToRemove.size > 0) {
+      enemiesToRemove.forEach((id) => {
+        useRoomStore.getState().removeEnemy(id)
+      })
+    }
+
+    roomEnemies.forEach((enemy) => {
+      const dx = enemy.x - x
+      const dy = enemy.y - y
+      const distance = Math.sqrt(dx * dx + dy * dy)
+      if (distance < 20) {
+        usePlayerStore.getState().takeDamage(1, enemy.x, enemy.y)
+      }
+    })
+
+    //cooldown del daño
+    usePlayerStore.getState().tickInvincibility()
+
+    //actualizar a los enemigos
+    useRoomStore.getState().updateEnemies()
+  })
+
+  return (
+  <>
+    <div
+      style={{
+        backgroundColor: '#000',
+        color: '#fff',
+        margin: 0,
+        padding: 0,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
+    >
+      <h1 style={{ textAlign: 'center' }}>Mini Isaac Clone</h1>
+
+      <svg
+        width="800"
+        height="600"
+        style={{ background: '#111', border: '2px solid white' }}
+      >
+        {/* Sala (puedes dibujar bordes o puertas dentro del Room) */}
+        <Room />
+
+        {/* Jugador */}
+        <rect
+          x={x}
+          y={y}
+          width="32"
+          height="32"
+          fill="white"
+        />
+
+        {/* Enemigos */}
+        {roomEnemies.map((enemy) => (
+          <rect
+            key={enemy.id}
+            x={enemy.x}
+            y={enemy.y}
+            width={32}
+            height={32}
+            fill="red"
+          />
+        ))}
+
+
+        {/* Proyectiles */}
+        {useProjectileStore.getState().projectiles.map((p) => (
+          <circle
+            key={p.id}
+            cx={p.x}
+            cy={p.y}
+            r="4"
+            fill="yellow"
+          />
+        ))}
+
+        {/* PowerUps */}
+        {powerUps.get(currentRoom)?.map((p) => (
+          <circle
+            key={p.id}
+            cx={p.x}
+            cy={p.y}
+            r="8"
+            fill={
+              p.type === 'heal'
+                ? 'green'
+                : p.type === 'speed'
+                ? 'blue'
+                : p.type === 'multishot'
+                ? 'orange'
+                : 'purple'
+            }
+            stroke="white"
+            strokeWidth="2"
+          />
+        ))}
+      </svg>
+
+      {/* Barra de vida */}
+      <div
+        style={{
+          background: '#333',
+          border: '2px solid #fff',
+          width: 200,
+          height: 24,
+          margin: '16px auto',
+          borderRadius: 8,
+          position: 'relative',
+        }}
+      >
+        <div
+          style={{
+            background: 'red',
+            width: `${(hp / maxHp) * 100}%`,
+            height: '100%',
+            borderRadius: 8,
+            transition: 'width 0.2s',
+          }}
+        />
+        <span
+          style={{
+            position: 'absolute',
+            width: '100%',
+            textAlign: 'center',
+            color: '#fff',
+            top: 0,
+            left: 0,
+            lineHeight: '24px',
+            fontWeight: 'bold',
+          }}
+        >
+          {hp} / {maxHp}
+        </span>
+      </div>
+
+      <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+        <button onClick={() => useRoomStore.getState().move('left')}>←</button>
+        <button onClick={() => useRoomStore.getState().move('up')}>↑</button>
+        <button onClick={() => useRoomStore.getState().move('down')}>↓</button>
+        <button onClick={() => useRoomStore.getState().move('right')}>→</button>
+      </div>
+
+    </div>
+  </>
+)
+  
+}
+
+export default App
