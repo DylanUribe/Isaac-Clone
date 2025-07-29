@@ -5,16 +5,16 @@ export function applyPowerUpEffect(type) {
 
   switch (type) {
     case 'heal':
-      player.heal(1) // o el valor que quieras
+      player.heal(1) 
       break
     case 'maxHpUp':
       player.increaseMaxHp(1)
       break
     case 'speedUp':
-      player.increaseSpeed(0.5)
+      player.increaseSpeed(0.2)
       break
     case 'invincibility':
-      player.setInvincible(180) 
+      player.setInvincible(480) // 8 segundos
       break
     default:
       console.warn(`Power-up desconocido: ${type}`)

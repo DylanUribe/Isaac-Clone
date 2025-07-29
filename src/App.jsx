@@ -4,10 +4,11 @@ import { usePlayerStore } from './logic/usePlayerStore'
 import { useProjectileStore } from './logic/useProjectileStore'
 import { useGameLoop } from './logic/useGameLoop'
 import { useRoomStore } from './logic/useRoomStore'
+import Player from './components/Player'; // ajusta la ruta si es diferente
+import allEnemiesDead from './components/Room'; // ajusta la ruta si es diferente
 
 
 const keys = {}
-
 
 function App() {
   const hp = usePlayerStore((state) => state.hp)
@@ -18,8 +19,6 @@ function App() {
   const currentRoom = useRoomStore((state) => state.currentRoom)
   const enemies = useRoomStore((state) => state.enemies) || new Map()
   const roomEnemies = enemies instanceof Map ? enemies.get(currentRoom) || [] : []
-
-
   
   useEffect(() => {
   const down = (e) => {
@@ -47,18 +46,17 @@ function App() {
     const magnitude = Math.sqrt(dx * dx + dy * dy) || 1
     usePlayerStore.getState().setMoveDir({ x: dx / magnitude, y: dy / magnitude })
     usePlayerStore.getState().updatePosition()
-    
 
     // Disparos con flechas
-    const { x, y } = usePlayerStore.getState()
+    const { x: playerX, y: playerY } = usePlayerStore.getState()
     if (keys['arrowup']) {
-      useProjectileStore.getState().shoot(x + 12, y, 0, -1, 'up')
+      useProjectileStore.getState().shoot(playerX + 12, playerY, 0, -1, 'up')
     } else if (keys['arrowdown']) {
-      useProjectileStore.getState().shoot(x + 12, y + 32, 0, 1, 'down')
+      useProjectileStore.getState().shoot(playerX + 12, playerY + 32, 0, 1, 'down')
     } else if (keys['arrowleft']) {
-      useProjectileStore.getState().shoot(x, y + 12, -1, 0, 'left')
+      useProjectileStore.getState().shoot(playerX, playerY + 12, -1, 0, 'left')
     } else if (keys['arrowright']) {
-      useProjectileStore.getState().shoot(x + 32, y + 12, 1, 0, 'right')
+      useProjectileStore.getState().shoot(playerX + 32, playerY + 12, 1, 0, 'right')
     }
 
     // Actualizar balas
@@ -99,8 +97,8 @@ function App() {
     }
 
     roomEnemies.forEach((enemy) => {
-      const dx = enemy.x - x
-      const dy = enemy.y - y
+      const dx = enemy.x - playerX
+      const dy = enemy.y - playerY
       const distance = Math.sqrt(dx * dx + dy * dy)
       if (distance < 20) {
         usePlayerStore.getState().takeDamage(1, enemy.x, enemy.y)
@@ -135,17 +133,12 @@ function App() {
         height="600"
         style={{ background: '#111', border: '2px solid white' }}
       >
-        {/* Sala (puedes dibujar bordes o puertas dentro del Room) */}
-        <Room />
+
+        {/* Sala con puertas */}
+        <Room allEnemiesDead={allEnemiesDead} />
 
         {/* Jugador */}
-        <rect
-          x={x}
-          y={y}
-          width="32"
-          height="32"
-          fill="white"
-        />
+        <Player />
 
         {/* Enemigos */}
         {roomEnemies.map((enemy) => (
@@ -158,7 +151,6 @@ function App() {
             fill="red"
           />
         ))}
-
 
         {/* Proyectiles */}
         {useProjectileStore.getState().projectiles.map((p) => (
@@ -181,11 +173,13 @@ function App() {
             fill={
               p.type === 'heal'
                 ? 'green'
-                : p.type === 'speed'
+                : p.type === 'speedUp'
                 ? 'blue'
-                : p.type === 'multishot'
+                : p.type === 'maxHpUp'
                 ? 'orange'
-                : 'purple'
+                : p.type === 'invincibility'
+                ? 'purple'
+                : 'black'
             }
             stroke="white"
             strokeWidth="2"
@@ -229,18 +223,7 @@ function App() {
           {hp} / {maxHp}
         </span>
       </div>
-
-      <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
-        <button onClick={() => useRoomStore.getState().move('left')}>←</button>
-        <button onClick={() => useRoomStore.getState().move('up')}>↑</button>
-        <button onClick={() => useRoomStore.getState().move('down')}>↓</button>
-        <button onClick={() => useRoomStore.getState().move('right')}>→</button>
-      </div>
-
     </div>
   </>
-)
-  
-}
-
+)}
 export default App

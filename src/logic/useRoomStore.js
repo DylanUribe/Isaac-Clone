@@ -5,6 +5,7 @@ import { usePlayerStore } from './usePlayerStore'
 import { applyPowerUpEffect } from './PowerUps'
 import { useEffect } from 'react'
 
+
 export const useRoomStore = create((set, get) => {
   
   const initialMap = generateMap(10)
@@ -15,12 +16,18 @@ export const useRoomStore = create((set, get) => {
     const index = Math.floor(Math.random() * types.length)
     return types[index]
   } 
+
+  damageEnemy: (id, amount) =>
+    set((state) => ({
+      enemies: state.enemies.map((e) =>
+        e.id === id ? { ...e, hp: Math.max(0, e.hp - amount) } : e
+      )
+    }))
   
   return {
     move: (direction) => {
       const { currentRoom, map, enemies } = get()
 
-      // Asegúrate de que currentRoom es un string tipo "x,y"
       if (typeof currentRoom !== 'string') {
         console.warn('currentRoom inválido en move:', currentRoom)
         return
@@ -40,20 +47,33 @@ export const useRoomStore = create((set, get) => {
       const newKey = `${x + dx},${y + dy}`
 
       if (!map.has(newKey)) {
-       console.warn('No hay sala en dirección', direction, newKey)
-       return
+        console.warn('No hay sala en dirección', direction, newKey)
+        return
       }
 
+      // Verificar si hay enemigos vivos en la sala actual
+      const currentEnemies = enemies.get(currentRoom) || []
+      const allDefeated = currentEnemies.every((enemy) => enemy.hp <= 0)
+
+      if (!allDefeated) {
+        console.warn('No puedes salir de esta sala hasta derrotar a todos los enemigos.')
+        return
+      }
+
+      // Inicializar enemigos si no hay
       if (!enemies.has(newKey)) {
         const newEnemies = generateEnemies()
-        enemies.set(newKey, newEnemies)
+        const newEnemiesMap = new Map(enemies)
+        newEnemiesMap.set(newKey, newEnemies)
+        set({ enemies: newEnemiesMap })
       }
+
 
       set({ currentRoom: newKey })
     },
 
-    map: initialMap, // ejemplo básico
-    currentRoom: '0,0', // 🟢 ASEGURA ESTO
+    map: initialMap, 
+    currentRoom: '0,0', 
     enemies: new Map(),
     moveToRoom: (key) => {
       if (typeof key !== 'string') {
@@ -68,7 +88,6 @@ export const useRoomStore = create((set, get) => {
         console.warn('Sala no encontrada en el mapa:', key)
       }
     },
-
 
     powerUps: new Map(),
 
@@ -99,22 +118,22 @@ export const useRoomStore = create((set, get) => {
       const target = roomEnemies.find(e => e.id === id)
 
 
-      // 🔍 Buscar el enemigo eliminado
+      // Buscar el enemigo eliminado
       const removedEnemy = roomEnemies.find((e) => e.id === id)
 
-      // 🧹 Eliminarlo de la lista
+      // Eliminarlo de la lista
       enemiesMap.set(
         roomKey,
         roomEnemies.filter((e) => e.id !== id)
       )
 
-      // 💥 30% de probabilidad de soltar power-up
+      // 30% de probabilidad de soltar power-up
       if (Math.random() < 0.3 && target) {
         const type = getRandomPowerUpType()
         useRoomStore.getState().spawnPowerUp(roomKey, target.x, target.y, type)
       }
 
-      // ⚡ Power-up aleatorio
+      // Power-up aleatorio
       const powerUpsMap = new Map(state.powerUps || new Map())
       if (removedEnemy && Math.random() < 0.3) {
         const newPowerUp = {
@@ -135,19 +154,21 @@ export const useRoomStore = create((set, get) => {
 
     updateEnemies: () => {
       const { currentRoom, enemies } = get()
-      const { x: playerX, y: playerY, hp, damageCooldown } = usePlayerStore.getState()
-      const setPlayer = usePlayerStore.setState
+      const { x: playerX, y: playerY } = usePlayerStore.getState()
 
       const speed = 1.2
-      const now = Date.now()
-
       const enemiesMap = new Map(enemies)
       const roomEnemies = enemiesMap.get(currentRoom) || []
 
-      const updatedEnemies = roomEnemies.map((enemy) => {
+      const updatedEnemies = []
+
+      for (let i = 0; i < roomEnemies.length; i++) {
+        const enemy = roomEnemies[i]
         const dx = playerX - enemy.x
         const dy = playerY - enemy.y
         const distance = Math.sqrt(dx * dx + dy * dy) || 1
+
+        // Comprobar colisión con jugador
         if (distance < 20) {
           const player = usePlayerStore.getState()
           if (player.damageCooldown <= 0) {
@@ -156,16 +177,31 @@ export const useRoomStore = create((set, get) => {
           }
         }
 
-        return {
-          ...enemy,
-          x: enemy.x + (dx / distance) * speed,
-          y: enemy.y + (dy / distance) * speed
+        // Calcular nueva posición
+        const newX = enemy.x + (dx / distance) * speed
+        const newY = enemy.y + (dy / distance) * speed
+
+        // Evitar overlap con enemigos ya actualizados
+        const willOverlap = updatedEnemies.some((other) =>
+          isOverlapping(newX, newY, other.x, other.y)
+        )
+
+        // Solo mover si no colisiona
+        if (!willOverlap) {
+          updatedEnemies.push({
+            ...enemy,
+            x: newX,
+            y: newY
+          })
+        } else {
+          updatedEnemies.push(enemy) // No se mueve si hay colisión
         }
-      })
+      }
 
       enemiesMap.set(currentRoom, updatedEnemies)
       set({ enemies: new Map(enemiesMap) }) // Nuevo Map para forzar re-render
     },
+
     
     shakeX: 0,
     shakeY: 0,
@@ -225,5 +261,37 @@ export const useRoomStore = create((set, get) => {
         }
       }
     },
+
+    damageEnemy: (id, amount) => {
+      set((state) => {
+        const roomKey = state.currentRoom
+        const enemiesMap = new Map(state.enemies)
+        const roomEnemies = enemiesMap.get(roomKey) || []
+
+        const updatedEnemies = roomEnemies.map((enemy) => {
+          if (enemy.id === id) {
+            const newHp = Math.max(0, enemy.hp - amount)
+            return { ...enemy, hp: newHp }
+          }
+          return enemy
+        })
+
+        enemiesMap.set(roomKey, updatedEnemies)
+        return { enemies: enemiesMap }
+      })
+    },
+
   }
 })
+
+const ENEMY_SIZE = 30
+
+function isOverlapping(x1, y1, x2, y2) {
+  return !(
+    x1 + ENEMY_SIZE < x2 ||
+    x1 > x2 + ENEMY_SIZE ||
+    y1 + ENEMY_SIZE < y2 ||
+    y1 > y2 + ENEMY_SIZE
+  )
+}
+

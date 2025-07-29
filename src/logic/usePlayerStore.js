@@ -3,7 +3,7 @@ import { create } from 'zustand'
 export const usePlayerStore = create((set, get) => ({
   x: 400,
   y: 300,
-  speed: 2.5,
+  speed: 2,
   hp: 5,
   maxHp: 5,
   moveDir: { x: 0, y: 0 },
@@ -13,15 +13,16 @@ export const usePlayerStore = create((set, get) => ({
   knockback: { x: 0, y: 0 },
   isInvincible: false,
   invincibilityFrames: 0,
+  blinkTimer: 0,
+
   
   setMoveDir: (dir) => set({ moveDir: dir }),
 
   updatePosition: () => {
-    const { x, y, moveDir, knockback } = get()
-    const speed = 2
+    const { x, y, moveDir, knockback, speed } = get()
     const newX = x + moveDir.x * speed + knockback.x
     const newY = y + moveDir.y * speed + knockback.y
-    set({ x: newX, y: newY, knockback: { x: 0, y: 0 } }) // aplicamos knockback solo una vez
+    set({ x: newX, y: newY, knockback: { x: 0, y: 0 } }) 
   },
 
   heal: (amount) => {
@@ -44,10 +45,11 @@ export const usePlayerStore = create((set, get) => ({
   },
 
   setInvincible: (frames) => {
-    set(() => ({
+    set({
       isInvincible: true,
-      invincibilityFrames: frames
-    }))
+      invincibilityFrames: frames,
+      isBlinking: true
+    });
   },
 
   takeDamage: (amount, sourceX, sourceY) => {
@@ -63,22 +65,33 @@ export const usePlayerStore = create((set, get) => ({
         damageCooldown: 60,
         isInvincible: true,
         invincibilityFrames: 60,
+        isBlinking: true,
         knockback: {
           x: (dx / distance) * knockbackForce,
           y: (dy / distance) * knockbackForce
         }
       })
+      console.log("isBlinking en takeDamage:", get().isBlinking);
+
     }
   },
 
   tickInvincibility: () => {
-    const { invincibilityFrames } = get()
+    const { invincibilityFrames } = get();
     if (invincibilityFrames > 0) {
-      const newFrames = invincibilityFrames - 1
+      const newFrames = invincibilityFrames - 1;
+      const shouldBlink = newFrames % 10 < 5;
+
+
       set({
         invincibilityFrames: newFrames,
-        isInvincible: newFrames > 0
-      })
+        isBlinking: shouldBlink
+      });
+    } else {
+      set({
+        isInvincible: false,
+        isBlinking: false
+      });
     }
   },
 

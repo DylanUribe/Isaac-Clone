@@ -1,87 +1,43 @@
 import { useRoomStore } from '../logic/useRoomStore'
-import Enemy from './Enemy'
-import Player from './Player'
-import Projectile from './Projectile'
 import { useProjectileStore } from '../logic/useProjectileStore'
+import { useEffect, useState } from 'react'
 
 export default function Room() {
   const map = useRoomStore((state) => state.map)
   const currentRoom = useRoomStore((state) => state.currentRoom)
-  const enemies = useRoomStore((state) => state.enemies)
   const moveToRoom = useRoomStore((state) => state.moveToRoom)
   const projectiles = useProjectileStore((state) => state.projectiles)
   const { shakeX, shakeY } = useRoomStore()
+  const enemiesMap = useRoomStore((state) => state.enemies)
 
-  const room = map?.get(currentRoom)
-  const enemyList = enemies instanceof Map ? enemies.get(currentRoom) || [] : []
+  const current = map.get(currentRoom)
+  const hasTopRoom = map.has(`${current.x},${current.y - 1}`)
+  const hasBottomRoom = map.has(`${current.x},${current.y + 1}`)
+  const hasLeftRoom = map.has(`${current.x - 1},${current.y}`)
+  const hasRightRoom = map.has(`${current.x + 1},${current.y}`)
 
-  const directions = {
-    up: [0, -1],
-    down: [0, 1],
-    left: [-1, 0],
-    right: [1, 0]
-  }
 
-  const tryMove = (dx, dy) => {
-    if (!currentRoom) return
-    let x = 0, y = 0
-    if (typeof currentRoom === 'string' && currentRoom.includes(',')) {
-      [x, y] = currentRoom.split(',').map(Number)
-    } else {
-      console.warn('currentRoom malformado:', currentRoom)
-    }
-    const key = `${x + dx},${y + dy}`
-    moveToRoom(key)
-  }
+  const enemies = enemiesMap instanceof Map && currentRoom
+    ? enemiesMap.get(currentRoom) || []
+    : []
 
+  const [locked, setLocked] = useState(true)
+
+  useEffect(() => {
+    const allDead = enemies.length === 0 || enemies.every(enemy => enemy.hp <= 0)
+    setLocked(!allDead)
+  }, [enemies])
+
+  const doorColor = locked ? 'darkred' : 'green'
+
+  // Elementos SVG, no HTML
   return (
-    <div
-      style={{
-        transform: `translate(${shakeX}px, ${shakeY}px)`,
-        transition: 'transform 0.05s',
-        padding: 20,
-        color: 'white',
-        position: 'relative',
-        height: '100%',
-        backgroundColor: '#111',
-        flexGrow: 1
-      }}
-    >
-      <h2>{room ? room.type.toUpperCase() + ' ROOM' : 'Loading...'}</h2>
-      <p>Position: {currentRoom}</p>
-
-      {/* Jugador */}
-      <Player />
-
-      {/* Proyectiles */}
-      <>
-        {projectiles.map((p) => (
-          <Projectile key={p.id} x={p.x} y={p.y} />
-        ))}
-      </>
-
-      {/* Enemigos */}
-      {enemyList.map((enemy) => (
-        <Enemy key={enemy.id} enemy={enemy} />
-      ))}
-
-      {/* Botones de dirección */}
-      <div style={{ marginTop: 20 }}>
-        {Object.entries(directions).map(([dir, [dx, dy]]) => {
-          const [x, y] = currentRoom.split(',').map(Number)
-          const key = `${x + dx},${y + dy}`
-          return (
-            <button
-              key={dir}
-              onClick={() => tryMove(dx, dy)}
-              disabled={!map?.has(key)}
-              style={{ margin: 5 }}
-            >
-              {dir}
-            </button>
-          )
-        })}
-      </div>
-    </div>
+    <>
+      {/* Puertas (rectángulos SVG) */}
+      {hasTopRoom && <rect x={380} y={0} width={40} height={20} fill={doorColor} />}
+      {hasBottomRoom && <rect x={380} y={580} width={40} height={20} fill={doorColor} />}
+      {hasLeftRoom && <rect x={0} y={280} width={20} height={40} fill={doorColor} />}
+      {hasRightRoom && <rect x={780} y={280} width={20} height={40} fill={doorColor} />}
+    </>
   )
 }
