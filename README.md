@@ -4,6 +4,6 @@ Usando los comandos:
 
 -*npm install*
 
--*npm run dev*
+-*npm run dev* // Entramos a la carpeta src y ponemos este comando en la terminal
 
-El primero para instalar las dependencias y el segundo para correr el proyeto i visualizarlo en la web.
+El primero para instalar las dependencias y el segundo para correr el proyeto y visualizarlo en la web.
