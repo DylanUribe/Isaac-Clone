@@ -30,7 +30,6 @@ export default function Room() {
 
   const doorColor = locked ? 'darkred' : 'green'
 
-  // Elementos SVG, no HTML
   return (
     <>
       {/* Puertas (rectángulos SVG) */}

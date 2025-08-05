@@ -6,6 +6,7 @@ import { useGameLoop } from './logic/useGameLoop'
 import { useRoomStore } from './logic/useRoomStore'
 import Player from './components/Player'; // ajusta la ruta si es diferente
 import allEnemiesDead from './components/Room'; // ajusta la ruta si es diferente
+import MiniMap from './components/MiniMap'
 
 
 const keys = {}
@@ -62,6 +63,19 @@ function App() {
     // Actualizar balas
     useProjectileStore.getState().updateProjectiles()
 
+    updateProjectiles: () => {
+      set((state) => {
+        const updated = state.projectiles.map((p) => ({
+          ...p,
+          x: p.x + p.xVel,
+          y: p.y + p.yVel,
+          age: p.age + 1, // <= incrementa edad
+        }))
+        return { projectiles: updated }
+      })
+    }
+
+
     // Colisión balas-enemigos
     const { projectiles } = useProjectileStore.getState()
     const { enemies, currentRoom } = useRoomStore.getState()
@@ -77,7 +91,12 @@ function App() {
         const distance = Math.sqrt(dx * dx + dy * dy)
         if (distance < 16) {
           projectilesToRemove.add(proj.id)
-          enemiesToRemove.add(enemy.id)
+
+          // 🔽 Nueva lógica: restar vida
+          enemy.hp -= proj.damage || 1
+          if (enemy.hp <= 0) {
+            enemiesToRemove.add(enemy.id)
+          }
         }
       })
     })
@@ -114,6 +133,11 @@ function App() {
 
   return (
   <>
+    <div>
+      {/* Tu juego normal aquí */}
+      <MiniMap />
+    </div>
+
     <div
       style={{
         backgroundColor: '#000',
@@ -141,16 +165,38 @@ function App() {
         <Player />
 
         {/* Enemigos */}
-        {roomEnemies.map((enemy) => (
-          <rect
-            key={enemy.id}
-            x={enemy.x}
-            y={enemy.y}
-            width={32}
-            height={32}
-            fill="red"
-          />
-        ))}
+        {roomEnemies.map((enemy) => {
+          let color = 'gray'
+
+          switch (enemy.type) {
+            case 'basic':
+              color = 'gray'
+              break
+            case 'fast':
+              color = 'orange'
+              break
+            case 'tank':
+              color = 'brown'
+              break
+            case 'shooter':
+              color = 'purple'
+              break
+            default:
+              color = 'red'
+          }
+
+          return (
+            <rect
+              key={enemy.id}
+              x={enemy.x}
+              y={enemy.y}
+              width={32}
+              height={32}
+              fill={color}
+            />
+          )
+        })}
+
 
         {/* Proyectiles */}
         {useProjectileStore.getState().projectiles.map((p) => (

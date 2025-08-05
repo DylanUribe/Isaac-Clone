@@ -4,7 +4,6 @@ export default function Player() {
   const x = usePlayerStore((state) => state.x)
   const y = usePlayerStore((state) => state.y)
 
-  // Cambia "fill" para parpadear cuando recibe daño
   const isInvincible = usePlayerStore((state) => state.isInvincible) 
   const fillColor = isInvincible ? 'white' : 'blue'
 

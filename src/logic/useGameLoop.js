@@ -1,6 +1,19 @@
 import { useEffect, useRef } from 'react'
 import { useRoomStore } from './useRoomStore'
 import { usePlayerStore } from './usePlayerStore'
+import { useProjectileStore } from './useProjectileStore'
+
+function moveTowardPlayer(enemy, playerX, playerY, speed) {
+  const dx = playerX - enemy.x
+  const dy = playerY - enemy.y
+  const distance = Math.sqrt(dx * dx + dy * dy) || 1
+
+  return {
+    ...enemy,
+    x: enemy.x + (dx / distance) * speed,
+    y: enemy.y + (dy / distance) * speed,
+  }
+}
 
 export const useGameLoop = (callback) => {
   const callbackRef = useRef(callback)
@@ -10,71 +23,107 @@ export const useGameLoop = (callback) => {
   }, [callback])
 
   useEffect(() => {
-    let id
+    let animationFrameId
 
     const loop = () => {
-      // Ejecutar función pasada por el usuario
       callbackRef.current?.()
 
-      // Funciones principales del juego
       const roomStore = useRoomStore.getState()
       const playerStore = usePlayerStore.getState()
+      const projectileStore = useProjectileStore.getState()
 
-      roomStore.checkPowerUps()
-      roomStore.checkPowerUpPickup()
-      playerStore.tickInvincibility()
-      playerStore.tickDamageCooldown()
+      // Power-ups, invencibilidad, etc
+      roomStore.checkPowerUps?.()
+      roomStore.checkPowerUpPickup?.()
+      playerStore.tickInvincibility?.()
+      playerStore.tickDamageCooldown?.()
 
-      // Obtener estado actual necesario para detección
+      // Actualizar proyectiles
+      projectileStore.updateProjectiles?.()
+
+      // Detectar colisiones proyectiles enemigos contra jugador
+      for (const p of projectileStore.projectiles) {
+        if (p.owner === 'enemy') {
+          const dx = playerStore.x - p.x
+          const dy = playerStore.y - p.y
+          const distance = Math.sqrt(dx * dx + dy * dy)
+
+          if (distance < 20) {  // Ajusta el radio según necesites
+            playerStore.takeDamage(1, p.x, p.y)
+            // Opcional: remover proyectil después del impacto
+            // Puedes implementar eso en updateProjectiles o aquí
+          }
+        }
+      }
+
       const currentRoom = roomStore.currentRoom
-      const room = roomStore.map.get(currentRoom)
-
-      // Asumiendo que 'roomEnemies' es parte del estado de la habitación
-      const roomEnemies = roomStore.roomEnemies || [] // Ajusta según tu estado real
-
+      const enemiesMap = roomStore.enemies
+      const roomEnemies = enemiesMap.get(currentRoom) || []
       const playerX = playerStore.x
       const playerY = playerStore.y
-      
-      const doorsUnlocked = roomEnemies.length === 0
+
+      // Actualizar enemigos con cooldown y disparo
+      const newEnemies = roomEnemies.map(enemy => {
+        if (enemy.hp <= 0) return enemy
+
+        if (enemy.type === 'shooter') {
+          let shootCooldown = (enemy.shootCooldown ?? 0) - 1
+
+          if (shootCooldown <= 0) {
+            projectileStore.spawnProjectile(enemy.x, enemy.y, playerX, playerY, 'enemy')
+            console.log(`shooter ${enemy.id} fired!`)
+            shootCooldown = 120
+          }
+
+          return {
+            ...enemy,
+            shootCooldown
+          }
+        } else {
+          // Mover enemigo y devolver la versión actualizada
+          return moveTowardPlayer(enemy, playerX, playerY, enemy.speed)
+        }
+      })
+
+      // Actualizar mapa de enemigos con los enemigos modificados
+      const newEnemiesMap = new Map(enemiesMap)
+      newEnemiesMap.set(currentRoom, newEnemies)
+
+      // Guardar enemigos actualizados en el store
+      useRoomStore.setState({ enemies: newEnemiesMap })
+
+      // Condición para puertas desbloqueadas
+      const doorsUnlocked = newEnemies.every(e => e.hp <= 0)
+      const doorPadding = 10
 
       if (doorsUnlocked) {
-        const doorPadding = 10 // margen para colisión
-
-        // Puerta arriba
         if (playerY < 20 + doorPadding && playerX >= 360 && playerX <= 420) {
           roomStore.move('up')
-          id = requestAnimationFrame(loop)
+          animationFrameId = requestAnimationFrame(loop)
           return
         }
-
-        // Puerta abajo
         if (playerY > 580 - 32 - doorPadding && playerX >= 360 && playerX <= 420) {
           roomStore.move('down')
-          id = requestAnimationFrame(loop)
+          animationFrameId = requestAnimationFrame(loop)
           return
         }
-
-        // Puerta izquierda
         if (playerX < 20 + doorPadding && playerY >= 260 && playerY <= 320) {
           roomStore.move('left')
-          id = requestAnimationFrame(loop)
+          animationFrameId = requestAnimationFrame(loop)
           return
         }
-
-        // Puerta derecha
         if (playerX > 780 - 32 - doorPadding && playerY >= 260 && playerY <= 320) {
           roomStore.move('right')
-          id = requestAnimationFrame(loop)
+          animationFrameId = requestAnimationFrame(loop)
           return
         }
       }
 
-      id = requestAnimationFrame(loop)
+      animationFrameId = requestAnimationFrame(loop)
     }
 
-    id = requestAnimationFrame(loop)
+    animationFrameId = requestAnimationFrame(loop)
 
-    return () => cancelAnimationFrame(id)
+    return () => cancelAnimationFrame(animationFrameId)
   }, [])
 }
-

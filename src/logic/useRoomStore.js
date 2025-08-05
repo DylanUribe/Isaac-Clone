@@ -4,7 +4,23 @@ import { generateEnemies } from './enemyFactory'
 import { usePlayerStore } from './usePlayerStore'
 import { applyPowerUpEffect } from './PowerUps'
 import { useEffect } from 'react'
+import { useProjectileStore } from './useProjectileStore';
 
+
+const types = ['basic', 'fast', 'tank', 'shooter']
+
+const generateEnemiesForRoom = (roomId) => {
+  const count = Math.floor(Math.random() * 3) + 1
+  const enemies = []
+  for (let i = 0; i < count; i++) {
+    const type = types[Math.floor(Math.random() * types.length)]
+    const x = Math.random() * 700 + 50
+    const y = Math.random() * 500 + 50
+    enemies.push(generateEnemies(type, x, y))
+  }
+
+  return enemies
+}
 
 export const useRoomStore = create((set, get) => {
   
@@ -47,7 +63,6 @@ export const useRoomStore = create((set, get) => {
       const newKey = `${x + dx},${y + dy}`
 
       if (!map.has(newKey)) {
-        console.warn('No hay sala en dirección', direction, newKey)
         return
       }
 
@@ -56,20 +71,18 @@ export const useRoomStore = create((set, get) => {
       const allDefeated = currentEnemies.every((enemy) => enemy.hp <= 0)
 
       if (!allDefeated) {
-        console.warn('No puedes salir de esta sala hasta derrotar a todos los enemigos.')
         return
       }
 
       // Inicializar enemigos si no hay
       if (!enemies.has(newKey)) {
-        const newEnemies = generateEnemies()
-        const newEnemiesMap = new Map(enemies)
-        newEnemiesMap.set(newKey, newEnemies)
-        set({ enemies: newEnemiesMap })
-      }
-
-
+      const newEnemies = generateEnemiesForRoom(newKey)  // genera enemigos con tipos y posición
+      const newEnemiesMap = new Map(enemies)
+      newEnemiesMap.set(newKey, newEnemies)
+      set({ enemies: newEnemiesMap })
+    }
       set({ currentRoom: newKey })
+      usePlayerStore.getState().teleportToRoomEntrance(direction)
     },
 
     map: initialMap, 
@@ -77,7 +90,6 @@ export const useRoomStore = create((set, get) => {
     enemies: new Map(),
     moveToRoom: (key) => {
       if (typeof key !== 'string') {
-        console.warn('moveToRoom recibió algo que no es string:', key)
         return
       }
 
@@ -85,7 +97,6 @@ export const useRoomStore = create((set, get) => {
       if (map.has(key)) {
         set({ currentRoom: key })
       } else {
-        console.warn('Sala no encontrada en el mapa:', key)
       }
     },
 
@@ -154,13 +165,26 @@ export const useRoomStore = create((set, get) => {
 
     updateEnemies: () => {
       const { currentRoom, enemies } = get()
-      const { x: playerX, y: playerY } = usePlayerStore.getState()
 
-      const speed = 1.2
       const enemiesMap = new Map(enemies)
       const roomEnemies = enemiesMap.get(currentRoom) || []
 
       const updatedEnemies = []
+
+      const { projectiles } = useProjectileStore.getState()
+      const { x: playerX, y: playerY } = usePlayerStore.getState()
+
+      const hitByEnemy = projectiles.find((p) =>
+        p.owner === 'enemy' &&
+        p.age > 0 &&
+        Math.abs(p.x - playerX) < 20 &&
+        Math.abs(p.y - playerY) < 20
+      )
+
+      if (hitByEnemy) {
+        usePlayerStore.getState().takeDamage(1) // o el daño que desees
+        useRoomStore.getState().triggerShake()
+      }
 
       for (let i = 0; i < roomEnemies.length; i++) {
         const enemy = roomEnemies[i]
@@ -168,41 +192,58 @@ export const useRoomStore = create((set, get) => {
         const dy = playerY - enemy.y
         const distance = Math.sqrt(dx * dx + dy * dy) || 1
 
-        // Comprobar colisión con jugador
-        if (distance < 20) {
-          const player = usePlayerStore.getState()
-          if (player.damageCooldown <= 0) {
-            usePlayerStore.getState().takeDamage(1, enemy.x, enemy.y)
-            useRoomStore.getState().triggerShake()
+        // Mover con la velocidad propia
+        const speed = enemy.speed || 1.2
+
+        // Comportamiento shooter
+        let newShootCooldown = enemy.shootCooldown || 0
+        if (enemy.type === 'shooter') {
+          if (newShootCooldown <= 0) {
+            useProjectileStore.getState().spawnProjectile(enemy.x, enemy.y, playerX, playerY)
+            newShootCooldown = 100
+          } else {
+            newShootCooldown -= 1
           }
         }
 
-        // Calcular nueva posición
+        const { projectiles } = useProjectileStore.getState()
+
+        const hit = projectiles.find((p) =>
+          p.owner === 'player' &&
+          p.age > 0 && // <= evita colisiones con proyectiles nuevos
+          Math.abs(p.x - enemy.x) < 20 &&
+          Math.abs(p.y - enemy.y) < 20
+        )
+
+
+        // Calcular nueva posición hacia jugador (si se quiere que todos se muevan)
         const newX = enemy.x + (dx / distance) * speed
         const newY = enemy.y + (dy / distance) * speed
 
-        // Evitar overlap con enemigos ya actualizados
+        // Evitar overlap
         const willOverlap = updatedEnemies.some((other) =>
           isOverlapping(newX, newY, other.x, other.y)
         )
 
-        // Solo mover si no colisiona
         if (!willOverlap) {
           updatedEnemies.push({
             ...enemy,
             x: newX,
-            y: newY
+            y: newY,
+            shootCooldown: newShootCooldown
           })
         } else {
-          updatedEnemies.push(enemy) // No se mueve si hay colisión
+          updatedEnemies.push({
+            ...enemy,
+            shootCooldown: newShootCooldown
+          })
         }
       }
 
       enemiesMap.set(currentRoom, updatedEnemies)
-      set({ enemies: new Map(enemiesMap) }) // Nuevo Map para forzar re-render
+      set({ enemies: new Map(enemiesMap) })
     },
 
-    
     shakeX: 0,
     shakeY: 0,
     triggerShake: () => {

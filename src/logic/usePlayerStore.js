@@ -20,9 +20,30 @@ export const usePlayerStore = create((set, get) => ({
 
   updatePosition: () => {
     const { x, y, moveDir, knockback, speed } = get()
+
     const newX = x + moveDir.x * speed + knockback.x
     const newY = y + moveDir.y * speed + knockback.y
-    set({ x: newX, y: newY, knockback: { x: 0, y: 0 } }) 
+
+    // Límites del mapa
+    const svgWidth = 800
+    const svgHeight = 600
+    const playerSize = 20
+    const border = 2
+
+    const minX = 0 + border
+    const minY = 0 + border
+    const maxX = svgWidth - playerSize - border
+    const maxY = svgHeight - playerSize - border
+
+    // Aplica el cerco
+    const clampedX = Math.max(minX, Math.min(newX, maxX))
+    const clampedY = Math.max(minY, Math.min(newY, maxY))
+
+    set({
+      x: clampedX,
+      y: clampedY,
+      knockback: { x: 0, y: 0 }
+    })
   },
 
   heal: (amount) => {
@@ -54,11 +75,22 @@ export const usePlayerStore = create((set, get) => ({
 
   takeDamage: (amount, sourceX, sourceY) => {
     const { hp, damageCooldown, x, y, isInvincible } = get()
+
+    // Validar que sourceX/sourceY sean números
+    if (
+      typeof sourceX !== 'number' || isNaN(sourceX) ||
+      typeof sourceY !== 'number' || isNaN(sourceY)
+    ) {
+      console.warn("takeDamage: Coordenadas de origen inválidas", { sourceX, sourceY })
+      return
+    }
+
     if (damageCooldown <= 0 && hp > 0 && !isInvincible) {
       const dx = x - sourceX
       const dy = y - sourceY
       const distance = Math.sqrt(dx * dx + dy * dy) || 1
       const knockbackForce = 40
+      const angle = Math.atan2(dy, dx)
 
       set({
         hp: Math.max(0, hp - amount),
@@ -67,14 +99,13 @@ export const usePlayerStore = create((set, get) => ({
         invincibilityFrames: 60,
         isBlinking: true,
         knockback: {
-          x: (dx / distance) * knockbackForce,
-          y: (dy / distance) * knockbackForce
-        }
+          x: Math.cos(angle) * knockbackForce,
+          y: Math.sin(angle) * knockbackForce,
+        },
       })
-      console.log("isBlinking en takeDamage:", get().isBlinking);
-
     }
   },
+
 
   tickInvincibility: () => {
     const { invincibilityFrames } = get();
@@ -101,5 +132,43 @@ export const usePlayerStore = create((set, get) => ({
       set({ damageCooldown: damageCooldown - 1 })
     }
   },
+
+  teleportToRoomEntrance: (direction) => {
+    const playerSize = 20;
+    const svgWidth = 800;
+    const svgHeight = 600;
+    const edgeMargin = 4; // lo cerca que puede estar del borde
+    const entryOffset = 40; // cuán lejos se aleja del borde al entrar
+
+    let newX = get().x;
+    let newY = get().y;
+
+    switch (direction) {
+      case 'left':
+        newX = svgWidth - playerSize - edgeMargin;
+        newY = svgHeight / 2 - playerSize / 2;
+        break;
+      case 'right':
+        newX = edgeMargin;
+        newY = svgHeight / 2 - playerSize / 2;
+        break;
+      case 'up':
+        newX = svgWidth / 2 - playerSize / 2;
+        newY = svgHeight - playerSize - edgeMargin;
+        break;
+      case 'down':
+        newX = svgWidth / 2 - playerSize / 2;
+        newY = edgeMargin;
+        break;
+    }
+
+    // Aplica el offset para alejarlo de la puerta
+    if (direction === 'left') newX -= entryOffset;
+    if (direction === 'right') newX += entryOffset;
+    if (direction === 'up') newY -= entryOffset;
+    if (direction === 'down') newY += entryOffset;
+
+    set({ x: newX, y: newY });
+  }
 
 }))

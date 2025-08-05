@@ -1,18 +1,37 @@
 import { sample } from 'lodash'
+import { generateEnemies } from './enemyFactory'
 
-// Direcciones para conectar salas
+// Direcciones posibles
 const directions = [
-  { dx: 1, dy: 0 },   // Derecha
-  { dx: -1, dy: 0 },  // Izquierda
-  { dx: 0, dy: 1 },   // Abajo
-  { dx: 0, dy: -1 }   // Arriba
+  { dx: 1, dy: 0 },
+  { dx: -1, dy: 0 },
+  { dx: 0, dy: 1 },
+  { dx: 0, dy: -1 }
 ]
 
-// Genera un mapa de N salas conectadas aleatoriamente
 export function generateMap(roomCount = 10) {
   const map = new Map()
   const queue = [{ x: 0, y: 0 }]
   map.set('0,0', { x: 0, y: 0, type: 'start' })
+
+  // Añadimos una sala normal con enemigos
+  map.set('1,0', {
+    x: 1, y: 0,
+    type: 'normal',
+    enemies: [generateEnemies('basic', 100, 100)],
+    visited: false
+  })
+
+  // Boss room
+  map.set('2,0', {
+    x: 2, y: 0,
+    type: 'boss',
+    isBossRoom: true,
+    enemies: [generateEnemies('boss', 200, 200)],
+    visited: false
+  })
+  console.log('MAPA GENERADO:', Array.from(map.entries()))
+
 
   while (map.size < roomCount && queue.length > 0) {
     const current = queue.shift()
@@ -24,11 +43,18 @@ export function generateMap(roomCount = 10) {
       const key = `${nx},${ny}`
 
       if (!map.has(key)) {
+        const isBoss = map.size === roomCount - 1
+        const type = isBoss ? 'boss' : 'normal'
+
         map.set(key, {
           x: nx,
           y: ny,
-          type: map.size === roomCount - 1 ? 'boss' : 'normal'
+          type,
+          enemies: [generateEnemies(isBoss ? 'boss' : 'basic', 150, 150)],
+          isBossRoom: isBoss,
+          visited: false
         })
+
         queue.push({ x: nx, y: ny })
       }
     }
@@ -36,3 +62,4 @@ export function generateMap(roomCount = 10) {
 
   return map
 }
+
