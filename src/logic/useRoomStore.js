@@ -22,9 +22,19 @@ const generateEnemiesForRoom = (roomId) => {
   return enemies
 }
 
+
 export const useRoomStore = create((set, get) => {
   
   const initialMap = generateMap(10)
+
+  // Precargar enemigos desde generateMap
+  const enemiesMap = new Map()
+  initialMap.forEach((room, key) => {
+    if (room.enemies && room.enemies.length > 0) {
+      enemiesMap.set(key, room.enemies)
+    }
+  })
+
   const enemyData = new Map()
 
   const getRandomPowerUpType = () => {
@@ -41,6 +51,7 @@ export const useRoomStore = create((set, get) => {
     }))
   
   return {
+    
     move: (direction) => {
       const { currentRoom, map, enemies } = get()
 
@@ -76,18 +87,26 @@ export const useRoomStore = create((set, get) => {
 
       // Inicializar enemigos si no hay
       if (!enemies.has(newKey)) {
-      const newEnemies = generateEnemiesForRoom(newKey)  // genera enemigos con tipos y posición
-      const newEnemiesMap = new Map(enemies)
-      newEnemiesMap.set(newKey, newEnemies)
-      set({ enemies: newEnemiesMap })
-    }
+        const newEnemies = generateEnemiesForRoom(newKey)
+        const newEnemiesMap = new Map(enemies)
+        newEnemiesMap.set(newKey, newEnemies)
+        set({ enemies: newEnemiesMap })
+      }
+
+      // Marcar la sala como visitada
+      const newMap = new Map(map)
+      if (newMap.has(newKey)) {
+        newMap.set(newKey, { ...newMap.get(newKey), visited: true })
+        set({ map: newMap })
+      }
+
       set({ currentRoom: newKey })
       usePlayerStore.getState().teleportToRoomEntrance(direction)
-    },
+    }, //agregado para boss room
 
     map: initialMap, 
     currentRoom: '0,0', 
-    enemies: new Map(),
+    enemies: enemiesMap,
     moveToRoom: (key) => {
       if (typeof key !== 'string') {
         return
@@ -195,6 +214,47 @@ export const useRoomStore = create((set, get) => {
         // Mover con la velocidad propia
         const speed = enemy.speed || 1.2
 
+        // Poder especial del boss
+        if (enemy.type === 'boss') {
+
+          // === Ataque de área: Explosión si está cerca del jugador ===
+          const distToPlayer = Math.hypot(playerX - enemy.x, playerY - enemy.y)
+          if (distToPlayer < 80 && (!enemy.areaCooldown || enemy.areaCooldown <= 0)) {
+            // Simula una explosión que daña si el jugador está cerca
+            if (distToPlayer < 60) {
+              usePlayerStore.getState().takeDamage(2) // Daño mayor
+              useRoomStore.getState().triggerShake()
+            }
+            enemy.areaCooldown = 200
+          } else if (enemy.areaCooldown > 0) {
+            enemy.areaCooldown -= 1
+          }
+
+          // === Carga rápida hacia el jugador ===
+          if (!enemy.chargeCooldown || enemy.chargeCooldown <= 0) {
+            const chargeSpeed = 150
+            enemy.x += (dx / distance) * chargeSpeed
+            enemy.y += (dy / distance) * chargeSpeed
+            enemy.chargeCooldown = 400
+          } else {
+            enemy.chargeCooldown -= 1
+          }
+        
+          // Dispara en 8 direcciones cada 80 ticks
+          if (!enemy.bossPowerCooldown || enemy.bossPowerCooldown <= 0) {
+            for (let angle = 0; angle < 360; angle += 45) {
+              const rad = angle * Math.PI / 180
+              const targetX = enemy.x + Math.cos(rad) * 100
+              const targetY = enemy.y + Math.sin(rad) * 100
+              useProjectileStore.getState().spawnProjectile(enemy.x, enemy.y, targetX, targetY, { owner: 'enemy', speed: 6 })
+            }
+            enemy.bossPowerCooldown = 150
+          } else {
+            enemy.bossPowerCooldown -= 1
+          }
+        }
+        
+
         // Comportamiento shooter
         let newShootCooldown = enemy.shootCooldown || 0
         if (enemy.type === 'shooter') {
@@ -205,16 +265,24 @@ export const useRoomStore = create((set, get) => {
             newShootCooldown -= 1
           }
         }
-
+        // --- Detectar si fue golpeado por proyectil del jugador ---
         const { projectiles } = useProjectileStore.getState()
+
+        const hitboxSize = enemy.size || 32
 
         const hit = projectiles.find((p) =>
           p.owner === 'player' &&
-          p.age > 0 && // <= evita colisiones con proyectiles nuevos
-          Math.abs(p.x - enemy.x) < 20 &&
-          Math.abs(p.y - enemy.y) < 20
+          p.age > 0 &&
+          p.x >= enemy.x - hitboxSize &&
+          p.x <= enemy.x + hitboxSize &&
+          p.y >= enemy.y - hitboxSize &&
+          p.y <= enemy.y + hitboxSize
         )
 
+        if (hit) {
+          useRoomStore.getState().damageEnemy(enemy.id, 1)
+          useRoomStore.getState().triggerShake()
+        }
 
         // Calcular nueva posición hacia jugador (si se quiere que todos se muevan)
         const newX = enemy.x + (dx / distance) * speed

@@ -10,6 +10,7 @@ const directions = [
 ]
 
 export function generateMap(roomCount = 10) {
+  
   const map = new Map()
   const queue = [{ x: 0, y: 0 }]
   map.set('0,0', { x: 0, y: 0, type: 'start' })
@@ -21,6 +22,7 @@ export function generateMap(roomCount = 10) {
     enemies: [generateEnemies('basic', 100, 100)],
     visited: false
   })
+  
 
   // Boss room
   map.set('2,0', {
@@ -30,9 +32,7 @@ export function generateMap(roomCount = 10) {
     enemies: [generateEnemies('boss', 200, 200)],
     visited: false
   })
-  console.log('MAPA GENERADO:', Array.from(map.entries()))
-
-
+  
   while (map.size < roomCount && queue.length > 0) {
     const current = queue.shift()
 

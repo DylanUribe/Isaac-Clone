@@ -81,7 +81,6 @@ export const usePlayerStore = create((set, get) => ({
       typeof sourceX !== 'number' || isNaN(sourceX) ||
       typeof sourceY !== 'number' || isNaN(sourceY)
     ) {
-      console.warn("takeDamage: Coordenadas de origen inválidas", { sourceX, sourceY })
       return
     }
 

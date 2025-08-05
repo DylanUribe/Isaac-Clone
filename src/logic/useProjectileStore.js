@@ -87,7 +87,5 @@ export const useProjectileStore = create((set, get) => ({
         }
       ]
     }))
-
-    console.log('Enemy projectile spawned!')
   }
 }))

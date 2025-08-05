@@ -1,6 +1,8 @@
 import { random, uniqueId } from 'lodash'
 
 export const generateEnemies = (type, x, y) => {
+  let size = 16
+  if (type === 'boss') size = 47
   switch (type) {
     case 'basic':
       return { id: crypto.randomUUID(), type, x, y, hp: 5, speed: 0.7 }
@@ -19,7 +21,8 @@ export const generateEnemies = (type, x, y) => {
         hp: 50,
         speed: 0.5,
         shootCooldown: 0,
-        specialAttackCooldown: 300
+        specialAttackCooldown: 300,
+        size
       }
     default:
       throw new Error(`Unknown enemy type: ${type}`)

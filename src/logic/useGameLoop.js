@@ -71,7 +71,6 @@ export const useGameLoop = (callback) => {
 
           if (shootCooldown <= 0) {
             projectileStore.spawnProjectile(enemy.x, enemy.y, playerX, playerY, 'enemy')
-            console.log(`shooter ${enemy.id} fired!`)
             shootCooldown = 120
           }
 

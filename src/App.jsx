@@ -167,6 +167,8 @@ function App() {
         {/* Enemigos */}
         {roomEnemies.map((enemy) => {
           let color = 'gray'
+          let width = enemy.size || 32
+          let height = enemy.size || 32
 
           switch (enemy.type) {
             case 'basic':
@@ -181,6 +183,11 @@ function App() {
             case 'shooter':
               color = 'purple'
               break
+            case 'boss':
+              color = 'crimson'
+              width = enemy.size || 32
+              height = enemy.size || 32
+              break
             default:
               color = 'red'
           }
@@ -190,13 +197,14 @@ function App() {
               key={enemy.id}
               x={enemy.x}
               y={enemy.y}
-              width={32}
-              height={32}
+              width={width}
+              height={height}
               fill={color}
+              stroke="black"
+              strokeWidth={2}
             />
           )
         })}
-
 
         {/* Proyectiles */}
         {useProjectileStore.getState().projectiles.map((p) => (
