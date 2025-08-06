@@ -10,7 +10,7 @@ import { useProjectileStore } from './useProjectileStore';
 const types = ['basic', 'fast', 'tank', 'shooter']
 
 export const generateEnemiesForRoom = (roomId) => {
-  const count = Math.floor(Math.random() * 3) + 1
+  const count = Math.floor(Math.random() * 4) + 2
   const enemies = []
   for (let i = 0; i < count; i++) {
     const type = types[Math.floor(Math.random() * types.length)]
@@ -387,6 +387,35 @@ export const useRoomStore = create((set, get) => {
       })
     },
 
+    resetRooms: () => {
+      const newMap = generateMap(10)
+      const newEnemies = new Map()
+      
+      for (const [key, room] of newMap.entries()) {
+        let enemies = []
+        
+        if (key === '0,0') {
+          enemies = [] // no spawnear enemigos aquí
+        } else if (room.isBossRoom) {
+          enemies = [generateEnemies('boss', 300, 300)]
+        } else {
+          enemies = generateEnemiesForRoom(key)
+        }
+
+        room.enemies = enemies
+        newEnemies.set(key, enemies)
+      }
+
+      useProjectileStore.setState({ projectiles: [] })
+
+
+      set({
+        map: newMap,
+        currentRoom: '0,0',
+        enemies: newEnemies,
+        powerUps: new Map(),
+      })
+    }
   }
 })
 

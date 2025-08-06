@@ -51,7 +51,9 @@ export function generateMap(roomCount = 10) {
           x: nx,
           y: ny,
           type,
-          enemies: [generateEnemies(isBoss ? 'boss' : 'basic', 150, 150)],
+          enemies: isBoss
+            ? [generateEnemies('boss', 300, 300)]
+            : generateEnemiesForRoom(key),
           isBossRoom: isBoss,
           visited: false
         })

@@ -4,8 +4,8 @@ export const usePlayerStore = create((set, get) => ({
   x: 400,
   y: 300,
   speed: 2,
-  hp: 5,
-  maxHp: 5,
+  hp: 8,
+  maxHp: 8,
   moveDir: { x: 0, y: 0 },
   damageCooldown: 0,
   isBlinking: false,
@@ -14,8 +14,8 @@ export const usePlayerStore = create((set, get) => ({
   isInvincible: false,
   invincibilityFrames: 0,
   blinkTimer: 0,
+  gameOver: false,
 
-  
   setMoveDir: (dir) => set({ moveDir: dir }),
 
   updatePosition: () => {
@@ -73,24 +73,27 @@ export const usePlayerStore = create((set, get) => ({
   },
 
   takeDamage: (amount, sourceX, sourceY) => {
-    const { hp, damageCooldown, x, y, isInvincible } = get()
+    const { hp, damageCooldown, x, y, isInvincible } = get();
 
+    // Validación de coordenadas de origen
     if (
       typeof sourceX !== 'number' || isNaN(sourceX) ||
       typeof sourceY !== 'number' || isNaN(sourceY)
     ) {
-      return
+      return { hp, newHp: hp, gameOver: hp <= 0 };
     }
 
     if (damageCooldown <= 0 && hp > 0 && !isInvincible) {
-      const dx = x - sourceX
-      const dy = y - sourceY
-      const distance = Math.sqrt(dx * dx + dy * dy) || 1
-      const knockbackForce = 40
-      const angle = Math.atan2(dy, dx)
+      const dx = x - sourceX;
+      const dy = y - sourceY;
+      const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+      const knockbackForce = 40;
+      const angle = Math.atan2(dy, dx);
+
+      const newHp = Math.max(0, hp - amount);
 
       set({
-        hp: Math.max(0, hp - amount),
+        hp: newHp,
         damageCooldown: 60,
         isInvincible: true,
         invincibilityFrames: 60,
@@ -99,10 +102,32 @@ export const usePlayerStore = create((set, get) => ({
           x: Math.cos(angle) * knockbackForce,
           y: Math.sin(angle) * knockbackForce,
         },
-      })
+        gameOver: newHp <= 0
+      });
+
+      return { hp, newHp, gameOver: newHp <= 0 };
     }
+
+    // Si no se puede recibir daño, retorna el estado actual
+    return { hp, newHp: hp, gameOver: hp <= 0 };
   },
 
+  resetPlayer: () => set({
+    x: 100,
+    y: 100,
+    hp: 8,
+    maxHp: 8,
+    speed: 2,
+    moveDir: { x: 0, y: 0 },
+    damageCooldown: 0,
+    isBlinking: false,
+    isVisible: true,
+    knockback: { x: 0, y: 0 },
+    isInvincible: false,
+    invincibilityFrames: 0,
+    blinkTimer: 0,
+    gameOver: false
+  }),
 
   tickInvincibility: () => {
     const { invincibilityFrames } = get();

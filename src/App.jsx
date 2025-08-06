@@ -20,6 +20,22 @@ function App() {
   const currentRoom = useRoomStore((state) => state.currentRoom)
   const enemies = useRoomStore((state) => state.enemies) || new Map()
   const roomEnemies = enemies instanceof Map ? enemies.get(currentRoom) || [] : []
+
+  const gameOver = usePlayerStore((state) => state.gameOver)
+  const resetPlayer = usePlayerStore((state) => state.resetPlayer)
+  const resetRooms = useRoomStore((state) => state.resetRooms)
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (gameOver && e.key === 'r') {
+        resetPlayer()
+        resetRooms()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [gameOver])
   
   useEffect(() => {
   const down = (e) => {
@@ -239,6 +255,28 @@ function App() {
             strokeWidth="2"
           />
         ))}
+
+        {gameOver && (
+          <foreignObject x="0" y="0" width="800" height="600">
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'rgba(0, 0, 0, 1)',
+                color: 'white',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                fontSize: '2rem',
+                fontFamily: 'Arial',
+              }}
+            >
+              <p>GAME OVER</p>
+              <p style={{ fontSize: '1rem' }}>Presiona R para reiniciar</p>
+            </div>
+          </foreignObject>
+        )}
       </svg>
 
       {/* Barra de vida */}
