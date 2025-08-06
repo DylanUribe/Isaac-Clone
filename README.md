@@ -26,9 +26,16 @@ npm run build
 
 Esto creará una carpeta `/dist` con los archivos listos para subir a **Itch.io** o servir en cualquier host web.
 
-### Sin instalación (modo local)
+# Abrir juego
 
-Si no se quieree instalar nada, simplemente abre `src/index.html` en tu navegador.
+En este caso este repositorio ya viene por defecto el `/dist` por defecto asi como un .zip listo para subir.
+Para jugar en el navegador se puede en itch.io con el link: https://dylan19.itch.io/isaac-clone, o localmente con el comando 
+
+```bash
+npm run dev
+```
+
+Este comando se puede usar en la terminal dentro de la carpeta **/src** o en **/dist**
 
 ---
 
