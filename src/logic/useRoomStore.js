@@ -9,7 +9,7 @@ import { useProjectileStore } from './useProjectileStore';
 
 const types = ['basic', 'fast', 'tank', 'shooter']
 
-const generateEnemiesForRoom = (roomId) => {
+export const generateEnemiesForRoom = (roomId) => {
   const count = Math.floor(Math.random() * 3) + 1
   const enemies = []
   for (let i = 0; i < count; i++) {

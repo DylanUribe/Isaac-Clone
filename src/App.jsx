@@ -166,9 +166,9 @@ function App() {
 
         {/* Enemigos */}
         {roomEnemies.map((enemy) => {
-          let color = 'gray'
           let width = enemy.size || 32
           let height = enemy.size || 32
+          let color
 
           switch (enemy.type) {
             case 'basic':

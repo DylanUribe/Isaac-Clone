@@ -1,5 +1,6 @@
 import { sample } from 'lodash'
 import { generateEnemies } from './enemyFactory'
+import { generateEnemiesForRoom } from './useRoomStore'
 
 // Direcciones posibles
 const directions = [
@@ -19,7 +20,7 @@ export function generateMap(roomCount = 10) {
   map.set('1,0', {
     x: 1, y: 0,
     type: 'normal',
-    enemies: [generateEnemies('basic', 100, 100)],
+    enemies: generateEnemiesForRoom('1,0'),
     visited: false
   })
   
