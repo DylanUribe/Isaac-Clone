@@ -32,7 +32,6 @@ export const useGameLoop = (callback) => {
       const playerStore = usePlayerStore.getState()
       const projectileStore = useProjectileStore.getState()
 
-      // Power-ups, invencibilidad, etc
       roomStore.checkPowerUps?.()
       roomStore.checkPowerUpPickup?.()
       playerStore.tickInvincibility?.()
@@ -48,10 +47,8 @@ export const useGameLoop = (callback) => {
           const dy = playerStore.y - p.y
           const distance = Math.sqrt(dx * dx + dy * dy)
 
-          if (distance < 20) {  // Ajusta el radio según necesites
+          if (distance < 20) {  
             playerStore.takeDamage(1, p.x, p.y)
-            // Opcional: remover proyectil después del impacto
-            // Puedes implementar eso en updateProjectiles o aquí
           }
         }
       }

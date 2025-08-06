@@ -4,7 +4,7 @@ import { uniqueId } from 'lodash'
 export const useProjectileStore = create((set, get) => ({
   projectiles: [],
   speed: 3,
-  cooldown: 200, // ms entre disparos
+  cooldown: 200,
   lastShotTime: {
     up: 0,
     down: 0,
@@ -16,7 +16,6 @@ export const useProjectileStore = create((set, get) => ({
     const now = Date.now()
     const { lastShotTime, cooldown } = get()
 
-    // Verifica si el cooldown ha pasado
     if (now - lastShotTime[direction] < cooldown) return
 
     const id = uniqueId('proj_')
@@ -63,7 +62,7 @@ export const useProjectileStore = create((set, get) => ({
     const dy = targetY - y
     const distance = Math.sqrt(dx * dx + dy * dy) || 1
     const speed = 2
-    const offset = 15 // distancia para que el proyectil aparezca adelantado
+    const offset = 15 
 
     const startX = x + (dx / distance) * offset
     const startY = y + (dy / distance) * offset

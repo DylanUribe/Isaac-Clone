@@ -4,8 +4,8 @@ import { usePlayerStore } from './logic/usePlayerStore'
 import { useProjectileStore } from './logic/useProjectileStore'
 import { useGameLoop } from './logic/useGameLoop'
 import { useRoomStore } from './logic/useRoomStore'
-import Player from './components/Player'; // ajusta la ruta si es diferente
-import allEnemiesDead from './components/Room'; // ajusta la ruta si es diferente
+import Player from './components/Player'; 
+import allEnemiesDead from './components/Room'; 
 import MiniMap from './components/MiniMap'
 
 
@@ -69,7 +69,7 @@ function App() {
           ...p,
           x: p.x + p.xVel,
           y: p.y + p.yVel,
-          age: p.age + 1, // <= incrementa edad
+          age: p.age + 1, 
         }))
         return { projectiles: updated }
       })
@@ -92,7 +92,7 @@ function App() {
         if (distance < 16) {
           projectilesToRemove.add(proj.id)
 
-          // 🔽 Nueva lógica: restar vida
+          // restar vida
           enemy.hp -= proj.damage || 1
           if (enemy.hp <= 0) {
             enemiesToRemove.add(enemy.id)
@@ -134,7 +134,7 @@ function App() {
   return (
   <>
     <div>
-      {/* Tu juego normal aquí */}
+      {/* juego */}
       <MiniMap />
     </div>
 

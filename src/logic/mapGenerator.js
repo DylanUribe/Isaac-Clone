@@ -15,7 +15,7 @@ export function generateMap(roomCount = 10) {
   const queue = [{ x: 0, y: 0 }]
   map.set('0,0', { x: 0, y: 0, type: 'start' })
 
-  // Añadimos una sala normal con enemigos
+  // sala normal con enemigos
   map.set('1,0', {
     x: 1, y: 0,
     type: 'normal',

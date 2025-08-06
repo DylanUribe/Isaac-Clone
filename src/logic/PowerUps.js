@@ -14,7 +14,7 @@ export function applyPowerUpEffect(type) {
       player.increaseSpeed(0.2)
       break
     case 'invincibility':
-      player.setInvincible(480) // 8 segundos
+      player.setInvincible(480) 
       break
     default:
       console.warn(`Power-up desconocido: ${type}`)

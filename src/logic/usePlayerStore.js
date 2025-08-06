@@ -35,7 +35,6 @@ export const usePlayerStore = create((set, get) => ({
     const maxX = svgWidth - playerSize - border
     const maxY = svgHeight - playerSize - border
 
-    // Aplica el cerco
     const clampedX = Math.max(minX, Math.min(newX, maxX))
     const clampedY = Math.max(minY, Math.min(newY, maxY))
 
@@ -76,7 +75,6 @@ export const usePlayerStore = create((set, get) => ({
   takeDamage: (amount, sourceX, sourceY) => {
     const { hp, damageCooldown, x, y, isInvincible } = get()
 
-    // Validar que sourceX/sourceY sean números
     if (
       typeof sourceX !== 'number' || isNaN(sourceX) ||
       typeof sourceY !== 'number' || isNaN(sourceY)
@@ -136,8 +134,8 @@ export const usePlayerStore = create((set, get) => ({
     const playerSize = 20;
     const svgWidth = 800;
     const svgHeight = 600;
-    const edgeMargin = 4; // lo cerca que puede estar del borde
-    const entryOffset = 40; // cuán lejos se aleja del borde al entrar
+    const edgeMargin = 4; 
+    const entryOffset = 40; 
 
     let newX = get().x;
     let newY = get().y;

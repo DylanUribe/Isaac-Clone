@@ -201,7 +201,7 @@ export const useRoomStore = create((set, get) => {
       )
 
       if (hitByEnemy) {
-        usePlayerStore.getState().takeDamage(1) // o el daño que desees
+        usePlayerStore.getState().takeDamage(1) 
         useRoomStore.getState().triggerShake()
       }
 
@@ -217,12 +217,10 @@ export const useRoomStore = create((set, get) => {
         // Poder especial del boss
         if (enemy.type === 'boss') {
 
-          // === Ataque de área: Explosión si está cerca del jugador ===
           const distToPlayer = Math.hypot(playerX - enemy.x, playerY - enemy.y)
           if (distToPlayer < 80 && (!enemy.areaCooldown || enemy.areaCooldown <= 0)) {
-            // Simula una explosión que daña si el jugador está cerca
             if (distToPlayer < 60) {
-              usePlayerStore.getState().takeDamage(2) // Daño mayor
+              usePlayerStore.getState().takeDamage(2) 
               useRoomStore.getState().triggerShake()
             }
             enemy.areaCooldown = 200
@@ -230,7 +228,7 @@ export const useRoomStore = create((set, get) => {
             enemy.areaCooldown -= 1
           }
 
-          // === Carga rápida hacia el jugador ===
+          //  Carga rápida hacia el jugador 
           if (!enemy.chargeCooldown || enemy.chargeCooldown <= 0) {
             const chargeSpeed = 150
             enemy.x += (dx / distance) * chargeSpeed
@@ -265,7 +263,7 @@ export const useRoomStore = create((set, get) => {
             newShootCooldown -= 1
           }
         }
-        // --- Detectar si fue golpeado por proyectil del jugador ---
+        // Detectar si fue golpeado por proyectil del jugador 
         const { projectiles } = useProjectileStore.getState()
 
         const hitboxSize = enemy.size || 32
@@ -284,7 +282,6 @@ export const useRoomStore = create((set, get) => {
           useRoomStore.getState().triggerShake()
         }
 
-        // Calcular nueva posición hacia jugador (si se quiere que todos se muevan)
         const newX = enemy.x + (dx / distance) * speed
         const newY = enemy.y + (dy / distance) * speed
 

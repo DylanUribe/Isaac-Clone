@@ -38,9 +38,9 @@ export function createBoss() {
     hp: 150,                
     speed: 0.7,
     shootCooldown: 0,
-    specialAttackCooldown: 0,  // Empezar listo para atacar
-    attackPatterns: ['shoot', 'area', 'charge'], // Ataques variados
-    state: 'idle',          // Para manejar comportamiento
+    specialAttackCooldown: 0,  
+    attackPatterns: ['shoot', 'area', 'charge'], 
+    state: 'idle',         
     lastAttackTime: 0
   }
 }
